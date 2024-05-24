@@ -22,4 +22,20 @@ In the VS code editor-----
     app.use(cors());
     app.use(express.json());
     
+    app.get('/', (req, res) => {
+    res.send('Boss is running.Sorry, Boss is sitting.Haa haa')
+    })
+     app.listen(port, () => {
+    console.log('Boss is sitting on port ', port);
+     })
+7.connect to the mongodb
+8.in the mongodb-----
+    1.go to 'database'
+    2.click to connect
+    3.copy connection string and paste it in the index.js file
+    4.go to 'database access'
+    5.add new database user
+    6.replace the 'username' and 'password' from the connection string
+    7.finally operate CRUD operation 
+    8.comment out 'await client.close();'
 */
