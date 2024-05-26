@@ -40,6 +40,13 @@ async function run() {
             const result = await reviewsCollection.find().toArray();
             res.send(result);
         })
+        app.get('/menu-item',  async(req, res) =>{
+            const itemCategory = req.query.category;
+            const query = {category : itemCategory}
+            const result = await menuCollection.find(query).toArray();
+            res.send(result)
+            // console.log(category);
+        })
 
         // Send a ping to confirm a successful connection
         await client.db("admin").command({ ping: 1 });
@@ -55,6 +62,7 @@ run().catch(console.dir);
 app.get('/', (req, res) => {
     res.send('Boss is running.Sorry, Boss is sitting.Haa haa')
 })
+
 app.listen(port, () => {
     console.log('Boss is sitting on port ', port);
 })
