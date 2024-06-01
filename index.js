@@ -1,6 +1,7 @@
 const express = require('express');
 const app = express();
 const cors = require('cors');
+const jwt = require('jsonwebtoken');
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 require('dotenv').config()
 const port = process.env.PORT || 5000
@@ -8,6 +9,25 @@ const port = process.env.PORT || 5000
 // middleware
 app.use(cors());
 app.use(express.json());
+
+ // middlewares to verify token
+ const verifyToken = (req, res, next) =>{
+    // console.log(req.headers);
+    console.log('receivedd - ',req.headers.authorization);
+    if(!req.headers.authorization){
+       return res.status(401).send({ message : 'forbidden access'})
+    }
+    const token = req.headers.authorization.split(' ')[1];
+    console.log('token - ', token);
+    console.log('secret - ', process.env.ACCESS_SECRET_TOKEN)
+    jwt.verify(token, process.env.ACCESS_SECRET_TOKEN, (err, decoded) =>{
+        if(err){
+           return res.status(401).send({message : 'forbidden accessdfsef'})
+        }
+        req.decoded = decoded;
+        next();
+    })
+}
 
 // mongodb connection
 
@@ -34,6 +54,14 @@ async function run() {
         const menuItemCollection = database.collection('itemCarts');
         const userCollection = database.collection('users');
 
+        // jwt related api
+        app.post('/jwt', async(req, res) =>{
+            const user = req.body;
+            const token = jwt.sign(user, process.env.ACCESS_SECRET_TOKEN, {
+                expiresIn : '1h'
+            })
+            res.send({token});
+        })
         app.get('/menu', async(req, res) =>{
             const result = await menuCollection.find().toArray();
             res.send(result);
@@ -49,7 +77,7 @@ async function run() {
             res.send(result)
             // console.log(category);
         })
-        app.get('/users', async(req, res) =>{
+        app.get('/users', verifyToken, async(req, res) =>{
             const result = await userCollection.find().toArray();
             res.send(result);
         })
@@ -65,6 +93,17 @@ async function run() {
             // console.log(id)
             const query = {_id : new ObjectId(id)}
             const result = await userCollection.deleteOne(query);
+            res.send(result);
+        })
+        app.patch('/users/admin/:id', async(req, res) =>{
+            const id = req.params.id;
+            const filter = {_id : new ObjectId(id)}
+            const updatedDoc = {
+                $set : {
+                    role : 'admin'
+                }
+            }
+            const result = await userCollection.updateOne(filter, updatedDoc);
             res.send(result);
         })
         app.post('/cart', async(req, res) =>{
