@@ -75,7 +75,7 @@ async function run() {
             next();
 
         }
-        app.get('/users/admin/:email', verifyToken, verifyAdmin, async (req, res) => {
+        app.get('/users/admin/:email', verifyToken, async (req, res) => {
             // console.log('email - ', req.params.email)
             // console.log('decode - ', req.decoded.email);
             const userEmail = req.params.email;
@@ -106,7 +106,7 @@ async function run() {
             res.send(result)
             // console.log(category);
         })
-        app.get('/users', verifyToken, async (req, res) => {
+        app.get('/users', verifyToken, verifyAdmin, async (req, res) => {
             const result = await userCollection.find().toArray();
             res.send(result);
         })
@@ -133,6 +133,11 @@ async function run() {
                 }
             }
             const result = await userCollection.updateOne(filter, updatedDoc);
+            res.send(result);
+        })
+        app.post('/add-item', verifyToken, verifyAdmin, async (req, res) =>{
+            const itemInfo = req.body;
+            const result = await menuCollection.insertOne(itemInfo);
             res.send(result);
         })
         app.post('/cart', async (req, res) => {
