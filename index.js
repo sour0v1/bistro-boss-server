@@ -15,6 +15,7 @@ const verifyToken = (req, res, next) => {
     // console.log(req.headers);
     // console.log('receivedd - ', req.headers.authorization);
     if (!req.headers.authorization) {
+        console.log(req.headers.authorization);
         return res.status(401).send({ message: 'forbidden access' })
     }
     const token = req.headers.authorization.split(' ')[1];
@@ -117,12 +118,23 @@ async function run() {
             const result = await menuItemCollection.find(query).toArray();
             res.send(result);
         })
+        app.get('/all-menu', async (req, res) =>{
+            const result = await menuCollection.find().toArray();
+            res.send(result);
+        })
         app.delete('/users/:id', async (req, res) => {
             const id = req.params.id;
             // console.log(id)
             const query = { _id: new ObjectId(id) }
             const result = await userCollection.deleteOne(query);
             res.send(result);
+        })
+        app.delete('/delete/item/:id', verifyToken, async (req, res) =>{
+            const id = req.params.id;
+            const query = {_id : new ObjectId(id)}
+            const result = await menuCollection.deleteOne(query);
+            res.send(result);
+            console.log('delete', id)
         })
         app.patch('/users/admin/:id', async (req, res) => {
             const id = req.params.id;
