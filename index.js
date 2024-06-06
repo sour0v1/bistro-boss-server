@@ -5,6 +5,8 @@ const jwt = require('jsonwebtoken');
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 require('dotenv').config()
 const port = process.env.PORT || 5000
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY)
+// console.log(process.env.STRIPE_SECRET_KEY)
 
 // middleware
 app.use(cors());
@@ -55,6 +57,7 @@ async function run() {
         const reviewsCollection = database.collection("reviews");
         const menuItemCollection = database.collection('itemCarts');
         const userCollection = database.collection('users');
+        const paymentCollection = database.collection('payments');
 
         // jwt related api
         app.post('/jwt', async (req, res) => {
@@ -76,6 +79,39 @@ async function run() {
             next();
 
         }
+        // stripe payment
+        app.post('/create-payment-intent', async (req, res) => {
+            const { price } = req.body;
+            console.log(price)
+            const priceAmount = parseInt(price * 100);
+            console.log('price -', priceAmount);
+
+            const paymentIntent = await stripe.paymentIntents.create({
+                amount: priceAmount,
+                currency: 'usd',
+                payment_method_types: ['card']
+            })
+            res.send({
+                clientSecret: paymentIntent.client_secret
+            })
+
+        })
+        app.post('/payments', async (req, res) => {
+            // save payment info
+            const paymentInfo = req.body;
+            console.log(paymentInfo);
+            const paymentResult = await paymentCollection.insertOne(paymentInfo);
+            // delete cart items after getting payment
+            const query = {
+                _id: {
+                    $in: paymentInfo.cartIds.map(id => ObjectId.createFromHexString(id))
+                }
+            }
+            const deleteResult = await menuItemCollection.deleteMany(query);
+            res.send({
+                paymentResult, deleteResult
+            });
+        })
         app.get('/users/admin/:email', verifyToken, async (req, res) => {
             // console.log('email - ', req.params.email)
             // console.log('decode - ', req.decoded.email);
@@ -118,7 +154,7 @@ async function run() {
             const result = await menuItemCollection.find(query).toArray();
             res.send(result);
         })
-        app.get('/all-menu', async (req, res) =>{
+        app.get('/all-menu', async (req, res) => {
             const result = await menuCollection.find().toArray();
             res.send(result);
         })
@@ -129,9 +165,9 @@ async function run() {
             const result = await userCollection.deleteOne(query);
             res.send(result);
         })
-        app.delete('/delete/item/:id', verifyToken, async (req, res) =>{
+        app.delete('/delete/item/:id', verifyToken, async (req, res) => {
             const id = req.params.id;
-            const query = {_id : new ObjectId(id)}
+            const query = { _id: new ObjectId(id) }
             const result = await menuCollection.deleteOne(query);
             res.send(result);
             console.log('delete', id)
@@ -147,7 +183,7 @@ async function run() {
             const result = await userCollection.updateOne(filter, updatedDoc);
             res.send(result);
         })
-        app.post('/add-item', verifyToken, verifyAdmin, async (req, res) =>{
+        app.post('/add-item', verifyToken, verifyAdmin, async (req, res) => {
             const itemInfo = req.body;
             const result = await menuCollection.insertOne(itemInfo);
             res.send(result);
